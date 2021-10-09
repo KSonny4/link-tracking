@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 	"net/url"
+	"time"
 	//"net"
 	"os"
-	
+
 	//"github.com/golang/protobuf/proto"
 	pb "github.com/ksonny4/tracked-url-generator/generated"
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -17,7 +17,6 @@ import (
 )
 
 var DB *sql.DB
-
 
 //TODO https://www.alexedwards.net/blog/organising-database-access
 //type Clients struct {
@@ -42,23 +41,20 @@ type UrlRecord struct {
 	UrlType      URLType
 }
 
-
 var debug bool = false
-
 
 func CheckIfIdExists(id string) bool {
 	tx, err := DB.Begin()
 	defer tx.Rollback()
 	if err != nil {
 		log.Fatal(err)
-	}	
+	}
 
 	stmt, err := tx.Prepare("SELECT id FROM urls WHERE id = ?")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer stmt.Close()
-	
 
 	row, err := stmt.Query(id)
 	if err != nil {
@@ -74,11 +70,11 @@ func CheckIfIdExists(id string) bool {
 }
 
 func SaveUrlToDB(url string, id string, input *pb.UrlParams, urlType URLType) {
-	
-	if debug{
+
+	if debug {
 		log.Printf("Inserting url record %+v", input)
 	}
-	
+
 	// TODO test when value is missing
 	insertStudentSQL := `INSERT INTO urls(id, url, email, username, hits, created, last_modified, url_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	statement, err := DB.Prepare(insertStudentSQL)
@@ -87,7 +83,7 @@ func SaveUrlToDB(url string, id string, input *pb.UrlParams, urlType URLType) {
 	}
 
 	date := time.Now().Format(time.RFC3339)
-	
+
 	_, err = statement.Exec(id, input.Url, input.Email, input.Username, 0, date, date, urlType)
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -134,11 +130,11 @@ func GetUrl(input *pb.UrlParams, urlType URLType) (*pb.Url, error) {
 
 	generatedID := GenerateID(input, urlType)
 	generatedURL := fmt.Sprintf("https://links.pkubelka.cz/l/%s", generatedID)
-	
+
 	if debug {
 		log.Printf("Generated https://links.pkubelka.cz/l/%s for %s", generatedID, input)
 	}
-	
+
 	SaveUrlToDB(generatedURL, generatedID, input, urlType)
 	return &pb.Url{Url: generatedURL}, nil
 }
@@ -153,7 +149,7 @@ func GetTableUrls() []UrlRecord {
 	row, err := DB.Query("SELECT * FROM urls")
 	if err != nil {
 		log.Fatal(err)
-	}	
+	}
 	defer row.Close()
 
 	var urlRecords []UrlRecord

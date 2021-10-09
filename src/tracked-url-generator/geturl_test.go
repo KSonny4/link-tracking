@@ -9,7 +9,6 @@ import (
 	"sync"
 	"testing"
 
-	
 	"github.com/stretchr/testify/suite"
 
 	"database/sql"
@@ -17,11 +16,11 @@ import (
 
 	tracker "github.com/ksonny4/tracked-url-generator"
 
+	"bou.ke/monkey"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/ksonny4/tracked-url-generator/generated"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
-	"bou.ke/monkey"
 )
 
 type TestSuite struct {
@@ -31,7 +30,7 @@ type TestSuite struct {
 var db_filename string = "sqlite_test.db"
 
 func (suite *TestSuite) SetupTest() {
-	
+
 	log.Println(db_filename)
 
 	file, err := os.Create(db_filename)
@@ -144,19 +143,18 @@ func (suite *TestSuite) TestURLValidation() {
 	}
 }
 
-
 func (suite *TestSuite) TestParallelGetURL() {
 	numberOfGoroutines := 1000
 
 	assert.NotNil(suite.T(), tracker.DB)
 
 	tracker.CreateTableIfNotExists()
-	
+
 	input := pb.UrlParams{Url: "https://www.example.com", Email: proto.String(""), Username: proto.String("")}
 	var wg sync.WaitGroup
-	for i := 0; i < numberOfGoroutines; i++ {		
+	for i := 0; i < numberOfGoroutines; i++ {
 		wg.Add(1)
-		go func() {			
+		go func() {
 			tracker.GetUrl(&input, tracker.ShortURL)
 			wg.Done()
 		}()
