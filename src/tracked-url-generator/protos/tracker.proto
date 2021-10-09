@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package protos;
+option go_package = "github.com/ksonny4/tracked-url-generator/generated";
+
+
+
+service Tracker {
+  rpc GetUrl (UrlParams) returns (Url) {}
+}
+
+message Url {
+  string Url = 1;
+}
+
+message UrlParams {
+  string Url = 1; // Url to shorten/redirect
+  optional string Email = 2; // Optional email of user
+  optional string Username = 3; // Optional name of user
+}
