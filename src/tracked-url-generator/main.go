@@ -187,6 +187,10 @@ func GetUrl(input *pb.URLGenerateRequest) (*pb.Url, error) {
 		if _, err := url.ParseRequestURI(input.GetUrlParams().Url); err != nil {
 			return &pb.Url{}, fmt.Errorf("invalid URL. Input data: %s", input)
 		}
+	} else if input.GetPixelParams() != nil {
+		if input.GetPixelParams().Note != "" {
+			return &pb.Url{}, fmt.Errorf("Missing note in request: %s", input)
+		}
 	}
 	
 	generatedID := GenerateID(input)
