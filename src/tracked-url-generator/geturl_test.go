@@ -28,19 +28,23 @@ type TestSuite struct {
 	suite.Suite
 }
 
-func (suite *TestSuite) SetupTest() {
+var mutex = &sync.Mutex{}
 
+
+func (suite *TestSuite) SetupTest() {	
 	db_name, _ := gonanoid.New()
-	db_filename := fmt.Sprintf("./tmp/%s_test.db", db_name)
+	//db_filename := fmt.Sprintf("./%s_test.db", db_name)
+	db_filename := fmt.Sprintf("./%s_test.db", db_name)
 	log.Println(db_filename)
 
-	file, err := os.Create(db_name)
+	file, err := os.Create(db_filename)
 	if err != nil {
 		panic(err.Error())
 	}
 	file.Close()
 
 	tracker.DB, _ = sql.Open("sqlite3", db_filename)
+	tracker.DB.SetMaxOpenConns(1)
 }
 
 func (s *TestSuite) TearDownTest() {
@@ -82,6 +86,8 @@ func (suite *TestSuite) TestGenerateE2E() {
 	// Save GetUniqueId meant to be mocked
 	GetUniqueIdOriginal := tracker.GetUniqueId
 
+	tracker.CreateTableIfNotExists()
+
 	for _, params := range parameters {
 		// Mock GetUniqueId
 		tracker.GetUniqueId = func() string {
@@ -89,7 +95,6 @@ func (suite *TestSuite) TestGenerateE2E() {
 		}
 
 		// Actual test
-		tracker.CreateTableIfNotExists()
 
 		input := pb.UrlParams{Url: params.url, Email: proto.String(params.email), Username: proto.String(params.username)}
 		url_result, _ := tracker.GetUrl(&input, tracker.ShortURL)
@@ -126,8 +131,9 @@ func (suite *TestSuite) TestURLValidation() {
 		{url: "http://www.google.com", expectedResult: true},
 	}
 
+	tracker.CreateTableIfNotExists()
+
 	for _, params := range parameters {
-		tracker.CreateTableIfNotExists()
 
 		input := pb.UrlParams{Url: params.url, Email: proto.String(""), Username: proto.String("")}
 		_, err := tracker.GetUrl(&input, tracker.ShortURL)

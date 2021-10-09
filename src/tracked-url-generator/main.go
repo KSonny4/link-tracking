@@ -7,7 +7,6 @@ import (
 	"time"
 	"net/url"
 	//"net"
-	"sync"
 	"os"
 	
 	//"github.com/golang/protobuf/proto"
@@ -18,7 +17,7 @@ import (
 )
 
 var DB *sql.DB
-var mutex = &sync.Mutex{}
+
 
 //TODO https://www.alexedwards.net/blog/organising-database-access
 //type Clients struct {
@@ -44,7 +43,7 @@ type UrlRecord struct {
 }
 
 
-var debug bool = true
+var debug bool = false
 
 
 func CheckIfIdExists(id string) bool {
@@ -127,7 +126,6 @@ func GetUrl(input *pb.UrlParams, urlType URLType) (*pb.Url, error) {
 			If urlType is LongURL, returns URL address created from original link (e.g. https://links.pkubelka.cz/l/www.example.com)
 	*/
 
-	mutex.Lock() // TODO make this better, move this somewhere closer
 	_, err := url.ParseRequestURI(input.Url)
 	if err != nil {
 		//Might as well validate if this is proper URL address
@@ -142,7 +140,6 @@ func GetUrl(input *pb.UrlParams, urlType URLType) (*pb.Url, error) {
 	}
 	
 	SaveUrlToDB(generatedURL, generatedID, input, urlType)
-	mutex.Unlock()
 	return &pb.Url{Url: generatedURL}, nil
 }
 
@@ -228,6 +225,7 @@ func main() {
 	if err != nil || DB == nil {
 		panic("Couldn't open DB.")
 	}
+	DB.SetMaxOpenConns(1) // https://github.com/mattn/go-sqlite3/issues/274
 	defer DB.Close()
 
 	CreateTableIfNotExists()
