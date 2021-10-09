@@ -3,19 +3,13 @@ package main_test
 import (
 	"fmt"
 	"log"
-	//	"log"
-
 	"os"
 	"sync"
 	"testing"
-
 	"github.com/stretchr/testify/suite"
-
 	"database/sql"
 	"time"
-
 	tracker "github.com/ksonny4/tracked-url-generator"
-
 	"bou.ke/monkey"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/ksonny4/tracked-url-generator/generated"
@@ -57,11 +51,20 @@ func GetRowByID(id string, rows []tracker.UrlRecord) (tracker.UrlRecord, error) 
 	return tracker.UrlRecord{}, fmt.Errorf("Could not find row by ID")
 }
 
+func GetRowByIDPixels(id string, rows []tracker.PixelRecord) (tracker.PixelRecord, error) {
+	for _, r := range rows {
+		if id == r.Id {
+			return r, nil
+		}
+	}
+	return tracker.PixelRecord{}, fmt.Errorf("Could not find row by ID")
+}
+
 func TestExampleTestSuite(t *testing.T) {
 	suite.Run(t, new(TestSuite))
 }
 
-func (suite *TestSuite) TestGenerateE2E() {
+func (suite *TestSuite) TestGenerateE2ELinks() {
 	// Prepare for test
 	wayback := time.Date(1974, time.May, 19, 1, 2, 3, 0, time.UTC)
 	patch := monkey.Patch(time.Now, func() time.Time { return wayback })
@@ -92,13 +95,16 @@ func (suite *TestSuite) TestGenerateE2E() {
 		}
 
 		// Actual test
-
-		input := pb.UrlParams{Url: params.url, Email: proto.String(params.email), Username: proto.String(params.username)}
-		url_result, _ := tracker.GetUrl(&input, tracker.ShortURL)
+		
+		input := &pb.URLGenerateRequest{Request: &pb.URLGenerateRequest_UrlParams{
+			UrlParams: &pb.UrlParams{Url: params.url, UrlType: pb.URLType_URL_SHORT, Email: proto.String(params.email), Username: proto.String(params.username)},
+		}}
+		
+		url_result, _ := tracker.GetUrl(input)
 
 		assert.NotNil(suite.T(), url_result)
 		rows := tracker.GetTableUrls()
-		record, err := GetRowByID(params.id, rows)
+		record, err := GetRowByID(params.id, *rows)
 		assert.Nil(suite.T(), err)
 
 		assert.Equal(suite.T(), params.id, record.Id)
@@ -108,7 +114,66 @@ func (suite *TestSuite) TestGenerateE2E() {
 		assert.Equal(suite.T(), 0, record.Hits)
 		assert.Equal(suite.T(), wayback, record.Created)
 		assert.Equal(suite.T(), wayback, record.LastModified)
-		assert.Equal(suite.T(), tracker.ShortURL, record.UrlType)
+		assert.Equal(suite.T(), pb.URLType_URL_SHORT.String(), record.UrlType)
+	}
+
+	// Put original GetUniqueId back
+	tracker.GetUniqueId = GetUniqueIdOriginal
+}
+
+
+func (suite *TestSuite) TestGenerateE2EPixels() {
+	// Prepare for test
+	wayback := time.Date(1974, time.May, 19, 1, 2, 3, 0, time.UTC)
+	patch := monkey.Patch(time.Now, func() time.Time { return wayback })
+	defer patch.Unpatch()
+
+	assert.NotNil(suite.T(), tracker.DB)
+
+	parameters := []struct {
+		note     string
+		email    string
+		username string
+		url      string
+		id       string
+	}{
+		{note: "Note", email: "user@email.com", username: "TestUser", url: "https://www.example.com", id: "1"},
+		{note: "Note",email: "user@email.com", url: "https://www.example2.com", id: "2"},
+		{note: "Note",username: "TestUser", url: "https://www.example3.com", id: "3"},
+	}
+
+	// Save GetUniqueId meant to be mocked
+	GetUniqueIdOriginal := tracker.GetUniqueId
+
+	tracker.CreateTableIfNotExists()
+
+	for _, params := range parameters {
+		// Mock GetUniqueId
+		tracker.GetUniqueId = func() string {
+			return params.id
+		}
+
+		// Actual test
+		
+		input := &pb.URLGenerateRequest{Request: &pb.URLGenerateRequest_PixelParams{
+			PixelParams: &pb.PixelParams{Note: params.note, Url: proto.String(params.url), Email: proto.String(params.email), Username: proto.String(params.username)},
+		}}
+		
+		url_result, _ := tracker.GetUrl(input)
+
+		assert.NotNil(suite.T(), url_result)
+		rows := tracker.GetTablePixels()
+		record, err := GetRowByIDPixels(params.id, *rows)
+		assert.Nil(suite.T(), err)
+
+		assert.Equal(suite.T(), params.id, record.Id)
+		assert.Equal(suite.T(), params.url, record.Url)
+		assert.Equal(suite.T(), params.email, record.Email)
+		assert.Equal(suite.T(), params.username, record.Username)
+		assert.Equal(suite.T(), 0, record.Hits)
+		assert.Equal(suite.T(), wayback, record.Created)
+		assert.Equal(suite.T(), wayback, record.LastModified)
+		assert.Equal(suite.T(), params.note, record.Note)
 	}
 
 	// Put original GetUniqueId back
@@ -132,8 +197,12 @@ func (suite *TestSuite) TestURLValidation() {
 
 	for _, params := range parameters {
 
-		input := pb.UrlParams{Url: params.url, Email: proto.String(""), Username: proto.String("")}
-		_, err := tracker.GetUrl(&input, tracker.ShortURL)
+		
+		input := &pb.URLGenerateRequest{Request: &pb.URLGenerateRequest_UrlParams{
+			UrlParams: &pb.UrlParams{Url: params.url, UrlType: pb.URLType_URL_SHORT, Email: proto.String(""), Username: proto.String("")},
+		}}
+		
+		_, err := tracker.GetUrl(input)
 
 		if params.expectedResult {
 			assert.Nil(suite.T(), err)
@@ -144,18 +213,22 @@ func (suite *TestSuite) TestURLValidation() {
 }
 
 func (suite *TestSuite) TestParallelGetURL() {
-	numberOfGoroutines := 1000
+	numberOfGoroutines := 100
 
 	assert.NotNil(suite.T(), tracker.DB)
 
 	tracker.CreateTableIfNotExists()
 
-	input := pb.UrlParams{Url: "https://www.example.com", Email: proto.String(""), Username: proto.String("")}
+
+	input := &pb.URLGenerateRequest{Request: &pb.URLGenerateRequest_UrlParams{
+		UrlParams: &pb.UrlParams{Url: "https://www.example.com", UrlType: pb.URLType_URL_SHORT, Email: proto.String(""), Username: proto.String("")},
+	}}
+	
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfGoroutines; i++ {
 		wg.Add(1)
 		go func() {
-			tracker.GetUrl(&input, tracker.ShortURL)
+			tracker.GetUrl(input)
 			wg.Done()
 		}()
 	}
@@ -163,6 +236,6 @@ func (suite *TestSuite) TestParallelGetURL() {
 
 	rows := tracker.GetTableUrls()
 
-	assert.Equal(suite.T(), numberOfGoroutines, len(rows))
+	assert.Equal(suite.T(), numberOfGoroutines, len(*rows))
 
 }

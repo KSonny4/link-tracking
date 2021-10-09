@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TrackerClient interface {
-	GetUrl(ctx context.Context, in *UrlParams, opts ...grpc.CallOption) (*Url, error)
+	GetUrl(ctx context.Context, in *URLGenerateRequest, opts ...grpc.CallOption) (*Url, error)
 }
 
 type trackerClient struct {
@@ -29,7 +29,7 @@ func NewTrackerClient(cc grpc.ClientConnInterface) TrackerClient {
 	return &trackerClient{cc}
 }
 
-func (c *trackerClient) GetUrl(ctx context.Context, in *UrlParams, opts ...grpc.CallOption) (*Url, error) {
+func (c *trackerClient) GetUrl(ctx context.Context, in *URLGenerateRequest, opts ...grpc.CallOption) (*Url, error) {
 	out := new(Url)
 	err := c.cc.Invoke(ctx, "/protos.Tracker/GetUrl", in, out, opts...)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *trackerClient) GetUrl(ctx context.Context, in *UrlParams, opts ...grpc.
 // All implementations must embed UnimplementedTrackerServer
 // for forward compatibility
 type TrackerServer interface {
-	GetUrl(context.Context, *UrlParams) (*Url, error)
+	GetUrl(context.Context, *URLGenerateRequest) (*Url, error)
 	mustEmbedUnimplementedTrackerServer()
 }
 
@@ -50,7 +50,7 @@ type TrackerServer interface {
 type UnimplementedTrackerServer struct {
 }
 
-func (UnimplementedTrackerServer) GetUrl(context.Context, *UrlParams) (*Url, error) {
+func (UnimplementedTrackerServer) GetUrl(context.Context, *URLGenerateRequest) (*Url, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUrl not implemented")
 }
 func (UnimplementedTrackerServer) mustEmbedUnimplementedTrackerServer() {}
@@ -67,7 +67,7 @@ func RegisterTrackerServer(s grpc.ServiceRegistrar, srv TrackerServer) {
 }
 
 func _Tracker_GetUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UrlParams)
+	in := new(URLGenerateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func _Tracker_GetUrl_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/protos.Tracker/GetUrl",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TrackerServer).GetUrl(ctx, req.(*UrlParams))
+		return srv.(TrackerServer).GetUrl(ctx, req.(*URLGenerateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
