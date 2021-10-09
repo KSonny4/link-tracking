@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	gonanoid "github.com/matoous/go-nanoid/v2"
+	
 	"github.com/stretchr/testify/suite"
 
 	"database/sql"
@@ -28,13 +28,10 @@ type TestSuite struct {
 	suite.Suite
 }
 
-var mutex = &sync.Mutex{}
+var db_filename string = "sqlite_test.db"
 
-
-func (suite *TestSuite) SetupTest() {	
-	db_name, _ := gonanoid.New()
-	//db_filename := fmt.Sprintf("./%s_test.db", db_name)
-	db_filename := fmt.Sprintf("./%s_test.db", db_name)
+func (suite *TestSuite) SetupTest() {
+	
 	log.Println(db_filename)
 
 	file, err := os.Create(db_filename)
@@ -49,6 +46,7 @@ func (suite *TestSuite) SetupTest() {
 
 func (s *TestSuite) TearDownTest() {
 	tracker.DB.Close()
+	os.Remove(db_filename)
 }
 
 func GetRowByID(id string, rows []tracker.UrlRecord) (tracker.UrlRecord, error) {
