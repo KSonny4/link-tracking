@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/ksonny4/link-tracking/proto;linktracking";
+
+// These annotations are used when generating the OpenAPI file.
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    version: "1.0";
+  };
+  external_docs: {
+    url: "https://github.com/ksonny4/link-tracking";
+    description: "Link tracking repository";
+  }
+  schemes: HTTPS;
+};
+
+
+service Tracker {
+  rpc GetUrl (URLGenerateRequest) returns (Url) {
+    option (google.api.http) = {
+      // Route to this method from POST requests to /api/v1/geturl
+      post: "/api/v1/geturl"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get url"
+      description: "Returns URL"
+      tags: "URL"
+    };
+  }
+}
+
+message URLGenerateRequest {
+  oneof request {
+    UrlParams urlParams = 1;
+    PixelParams pixelParams = 2;
+  }
+}
+
+message Url {
+  string url = 1;
+}
+
+enum URLType {
+    URL_UNSPECIFIED = 0;
+    URL_SHORT = 1; // URL address with generated shortened name (e.g. https://links.pkubelka.cz/l/a1b2c3d4)		 
+    URL_LONG = 2; // URL address created from original link (e.g. https://links.pkubelka.cz/l/www.example.com)
+}
+
+
+message UrlParams {
+  string url = 1; // Url to shorten/redirect
+  URLType url_type = 2; // Url type
+  optional string email = 3; // Optional email of user
+  optional string username = 4; // Optional name of user
+}
+
+message PixelParams {
+  optional string url = 1; // Url connected with tracking pixel
+  optional string email = 2; // Optional email of user
+  optional string username = 3; // Optional name of user
+  string note = 4; // note for campain
+}
