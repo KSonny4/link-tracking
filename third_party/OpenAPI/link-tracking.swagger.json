@@ -1,0 +1,155 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "link-tracking.proto",
+    "version": "1.0"
+  },
+  "tags": [
+    {
+      "name": "Tracker"
+    }
+  ],
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/geturl": {
+      "post": {
+        "summary": "Get url",
+        "description": "Returns URL",
+        "operationId": "Tracker_GetUrl",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoUrl"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoURLGenerateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "URL"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protoPixelParams": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "protoURLGenerateRequest": {
+      "type": "object",
+      "properties": {
+        "urlParams": {
+          "$ref": "#/definitions/protoUrlParams"
+        },
+        "pixelParams": {
+          "$ref": "#/definitions/protoPixelParams"
+        }
+      }
+    },
+    "protoURLType": {
+      "type": "string",
+      "enum": [
+        "URL_UNSPECIFIED",
+        "URL_SHORT",
+        "URL_LONG"
+      ],
+      "default": "URL_UNSPECIFIED"
+    },
+    "protoUrl": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "protoUrlParams": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "urlType": {
+          "$ref": "#/definitions/protoURLType"
+        },
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Link tracking repository",
+    "url": "https://github.com/ksonny4/link-tracking"
+  }
+}
